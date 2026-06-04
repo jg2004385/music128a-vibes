@@ -5,7 +5,7 @@
 Requires Python 3.10+.
 
 ```bash
-pip3 install pandas matplotlib
+pip3 install -r requirements.txt
 ```
 
 ## Running the plot script
@@ -26,3 +26,19 @@ python3 plot_signals.py "data/Pilot Trial_01.csv" "output/Pilot Trial_01.png"
 # 600–700 s window
 python3 plot_signals.py "data/Pilot Trial_01.csv" "output/Pilot Trial_01_600-700s.png" --start-time-sec 600 --end-time-sec 700
 ```
+
+## Extracting MIDI timestamps
+
+Place the MIDI file into the repository, for example:
+
+```bash
+cp /path/to/002cold.mid data/002cold.mid
+```
+
+Then run:
+
+```bash
+python3 extract_midi_timestamps.py data/002cold.mid output/002cold_segments.csv
+```
+
+This writes a CSV with segment index, start/end times in seconds, duration, and note event count.
