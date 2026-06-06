@@ -1,0 +1,6 @@
+condition,temperature_file,block,temp_anchor_sec,sync_lead,sync_jump_c,block_start_temp_sec,block_end_temp_sec,finger_temp_start_c,finger_temp_end_c,finger_temp_drop_c
+003warm,5.12_003warm.csv,1,17.000,lead4,1.500,56.386,260.241,34.0300,32.5720,1.4580
+003warm,5.12_003warm.csv,2,17.000,lead4,1.500,398.770,567.083,32.5920,31.8360,0.7560
+003warm,5.12_003warm.csv,3,17.000,lead4,1.500,660.521,786.661,33.0840,33.1580,-0.0740
+003warm,5.12_003warm.csv,4,17.000,lead4,1.500,971.263,1104.283,34.3960,33.5640,0.8320
+003warm,5.12_003warm.csv,5,17.000,lead4,1.500,1279.071,1400.463,34.5100,34.6280,-0.1180

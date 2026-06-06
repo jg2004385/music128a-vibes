@@ -1,0 +1,6 @@
+condition,temperature_file,block,temp_anchor_sec,sync_lead,sync_jump_c,block_start_temp_sec,block_end_temp_sec,finger_temp_start_c,finger_temp_end_c,finger_temp_drop_c
+008cold,5.21_008cold.plw,1,32.000,lead3,4.686,51.333,202.975,31.6611,27.2485,4.4126
+008cold,5.21_008cold.plw,2,32.000,lead3,4.686,351.057,490.344,26.4015,24.8973,1.5042
+008cold,5.21_008cold.plw,3,32.000,lead3,4.686,605.751,830.589,23.1746,21.2968,1.8778
+008cold,5.21_008cold.plw,4,32.000,lead3,4.686,956.939,1114.782,20.5647,19.9346,0.6301
+008cold,5.21_008cold.plw,5,32.000,lead3,4.686,1292.427,1457.192,18.8202,18.0429,0.7773
