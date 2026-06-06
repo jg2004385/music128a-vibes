@@ -13,13 +13,13 @@ def parse_args():
     parser.add_argument(
         "--gap-threshold-sec",
         type=float,
-        default=1.0,
+        default=0.25,
         help="Maximum silence gap (seconds) between MIDI events within the same segment.",
     )
     parser.add_argument(
         "--min-duration-sec",
         type=float,
-        default=3.0,
+        default=0.5,
         help="Minimum segment duration to include in the output.",
     )
     parser.add_argument(
@@ -27,6 +27,18 @@ def parse_args():
         type=float,
         default=60.0,
         help="Silence gap (seconds) that separates blocks of exercises.",
+    )
+    parser.add_argument(
+        "--merge-gap-sec",
+        type=float,
+        default=0.25,
+        help="Merge small gaps (seconds) between consecutive segments into one segment.",
+    )
+    parser.add_argument(
+        "--expected-blocks",
+        type=int,
+        default=5,
+        help="Expected number of blocks in each recording. If set, the largest inter-segment gaps are used to define block boundaries.",
     )
     return parser.parse_args()
 
@@ -54,34 +66,64 @@ def load_midi_events(midi_path: Path):
     return events
 
 
-def segment_events(events, gap_threshold_sec: float, min_duration_sec: float):
+def segment_events(events, gap_threshold_sec: float, min_duration_sec: float, merge_gap_sec: float):
+    """Segment events into contiguous note-activity windows, then merge
+    very small gaps between consecutive segments so short bursts (e.g. chords)
+    are not dropped. Finally, filter by `min_duration_sec`.
+    """
     if not events:
         return []
 
-    segments = []
-    segment_start = events[0][0]
-    segment_end = events[0][0]
+    # build raw segments based only on the gap threshold
+    raw_segments = []
+    seg_start = events[0][0]
+    seg_end = events[0][0]
     note_count = 0
-
     for seconds, note, velocity, track_index in events:
-        if seconds - segment_end > gap_threshold_sec:
-            duration = segment_end - segment_start
-            if duration >= min_duration_sec:
-                segments.append((segment_start, segment_end, duration, note_count))
-            segment_start = seconds
+        if seconds - seg_end > gap_threshold_sec:
+            raw_segments.append((seg_start, seg_end, seg_end - seg_start, note_count))
+            seg_start = seconds
             note_count = 0
-        segment_end = max(segment_end, seconds)
+        seg_end = max(seg_end, seconds)
         note_count += 1
+    raw_segments.append((seg_start, seg_end, seg_end - seg_start, note_count))
 
-    duration = segment_end - segment_start
-    if duration >= min_duration_sec:
-        segments.append((segment_start, segment_end, duration, note_count))
+    # merge tiny gaps between consecutive raw segments so short, closely spaced
+    # bursts are treated as a single segment (helps capture chord sequences)
+    merged = []
+    cur_start, cur_end, cur_dur, cur_count = raw_segments[0]
+    for s, e, d, nc in raw_segments[1:]:
+        gap = s - cur_end
+        if gap <= merge_gap_sec:
+            # extend current segment to include this one
+            cur_end = e
+            cur_dur = cur_end - cur_start
+            cur_count += nc
+        else:
+            merged.append((cur_start, cur_end, cur_dur, cur_count))
+            cur_start, cur_end, cur_dur, cur_count = s, e, d, nc
+    merged.append((cur_start, cur_end, cur_dur, cur_count))
+
+    # finally, filter merged segments by min_duration_sec
+    segments = [seg for seg in merged if seg[2] >= min_duration_sec]
     return segments
 
 
-def split_blocks(segments, block_gap_threshold_sec: float):
+def split_blocks(segments, block_gap_threshold_sec: float, expected_blocks: int = None):
     if not segments:
         return []
+
+    if expected_blocks and expected_blocks > 1 and len(segments) >= expected_blocks:
+        gaps = [(segments[i][0] - segments[i - 1][1], i - 1) for i in range(1, len(segments))]
+        largest = sorted(gaps, key=lambda x: x[0], reverse=True)[: expected_blocks - 1]
+        boundaries = sorted(idx for _, idx in largest)
+        blocks = []
+        start = 0
+        for boundary in boundaries:
+            blocks.append(segments[start : boundary + 1])
+            start = boundary + 1
+        blocks.append(segments[start:])
+        return blocks
 
     blocks = []
     current_block = [segments[0]]
@@ -117,8 +159,10 @@ def main():
         raise FileNotFoundError(f"MIDI file not found: {args.midi_path}")
 
     events = load_midi_events(args.midi_path)
-    segments = segment_events(events, args.gap_threshold_sec, args.min_duration_sec)
-    blocks = split_blocks(segments, args.block_gap_threshold_sec)
+    segments = segment_events(
+        events, args.gap_threshold_sec, args.min_duration_sec, args.merge_gap_sec
+    )
+    blocks = split_blocks(segments, args.block_gap_threshold_sec, args.expected_blocks)
     write_csv(args.output_csv_path, blocks)
 
     print(f"Loaded MIDI: {args.midi_path}")
